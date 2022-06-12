@@ -1,4 +1,8 @@
 menu "LED over TCP Configuration"
+    config BLINK_GPIO
+        int "LED pin number"
+        default 15
+
     choice WIFI_SCAN_AUTH_MODE_THRESHOLD
         prompt "WiFi Scan auth mode threshold"
         default ESP_WIFI_AUTH_OPEN

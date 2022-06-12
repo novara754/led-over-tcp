@@ -54,10 +54,20 @@ event_handler(void *arg, esp_event_base_t event_base, int32_t event_id, void *ev
                 ESP_LOGI(TAG, "Connected to WIFI");
                 break;
 
-            case WIFI_EVENT_STA_DISCONNECTED:
-                ESP_LOGE(TAG, "Lost connection to AP %s", CONFIG_WIFI_SSID);
-                xEventGroupSetBits(s_wifi_event_group, WIFI_FAIL_BIT);
+            case WIFI_EVENT_STA_DISCONNECTED: {
+                static int connect_attemps = 0;
+                if (connect_attemps < 5)
+                {
+                    ESP_LOGE(TAG, "Lost connection to AP %s, reconnecting...", CONFIG_WIFI_SSID);
+                    esp_wifi_connect();
+                }
+                else
+                {
+                    ESP_LOGE(TAG, "Failed to connect to AP %s", CONFIG_WIFI_SSID);
+                    xEventGroupSetBits(s_wifi_event_group, WIFI_FAIL_BIT);
+                }
                 break;
+            }
         }
     }
     else if (event_base == IP_EVENT)

@@ -13,9 +13,18 @@
 
 static const char *TAG = "led_over_tcp:main";
 
+static void configure_led(void)
+{
+    gpio_reset_pin(CONFIG_BLINK_GPIO);
+    gpio_set_direction(CONFIG_BLINK_GPIO, GPIO_MODE_OUTPUT);
+}
+
 void app_main(void)
 {
     ESP_ERROR_CHECK(nvs_flash_init());
+
+    ESP_LOGI(TAG, "Initializing GPIO pins...");
+    configure_led();
 
     ESP_LOGI(TAG, "Initializing WIFI...");
     wifi_init_sta();

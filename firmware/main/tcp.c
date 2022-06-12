@@ -14,43 +14,54 @@
 #include "lwip/sys.h"
 #include <lwip/netdb.h>
 
+#define TOGGLE_COMMAND 0xAA
+#define ACK_COMMAND 0x06
+
 static const char *TAG = "led_over_tcp:tcp";
+
+static void send_ack(const int sock)
+{
+    char ack = ACK_COMMAND;
+    int written_len = send(sock, &ack, 1, 0);
+    if (written_len != 1)
+    {
+        ESP_LOGE(TAG, "Failed to send ACK to client: %d", errno);
+    }
+}
 
 static void handle_client(const int sock)
 {
-    int len;
-    char rx_buffer[128];
-
-    do
+    while (true)
     {
-        len = recv(sock, rx_buffer, sizeof(rx_buffer) - 1, 0);
-        if (len < 0)
+        char command;
+        int read_len = recv(sock, &command, 1, 0);
+        if (read_len < 0)
         {
             ESP_LOGE(TAG, "Failed to receive data from client: errno %d", errno);
+            break;
         }
-        else if (len == 0)
+        else if (read_len == 0)
         {
             ESP_LOGW(TAG, "Connection closed");
+            break;
         }
         else
         {
-            rx_buffer[len] = 0;
-            ESP_LOGI(TAG, "Received %d bytes: '%s'", len, rx_buffer);
+            ESP_LOGI(TAG, "Received command: %X", command);
 
-            int to_write = len;
-            while (to_write > 0)
+            switch (command)
             {
-                int written = send(sock, rx_buffer, to_write, 0);
-                if (written < 0)
-                {
-                    ESP_LOGE(TAG, "Failed to send data to client: errno %d", errno);
+                case TOGGLE_COMMAND: {
+                    static uint32_t level = 1;
+                    gpio_set_level(CONFIG_BLINK_GPIO, level);
+                    level = !level;
                     break;
                 }
-                to_write -= written;
             }
+
+            send_ack(sock);
         }
     }
-    while (len > 0);
 }
 
 void tcp_server_task(void *args)
