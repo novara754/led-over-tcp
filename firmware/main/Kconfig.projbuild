@@ -1,0 +1,61 @@
+menu "LED over TCP Configuration"
+    choice WIFI_SCAN_AUTH_MODE_THRESHOLD
+        prompt "WiFi Scan auth mode threshold"
+        default ESP_WIFI_AUTH_OPEN
+        help
+            The weakest authmode to accept in the scan mode.
+
+        config ESP_WIFI_AUTH_OPEN
+            bool "OPEN"
+        config ESP_WIFI_AUTH_WEP
+            bool "WEP"
+        config ESP_WIFI_AUTH_WPA_PSK
+            bool "WPA PSK"
+        config ESP_WIFI_AUTH_WPA2_PSK
+            bool "WPA2 PSK"
+        config ESP_WIFI_AUTH_WPA_WPA2_PSK
+            bool "WPA/WPA2 PSK"
+        config ESP_WIFI_AUTH_WPA3_PSK
+            bool "WPA3 PSK"
+        config ESP_WIFI_AUTH_WPA2_WPA3_PSK
+            bool "WPA2/WPA3 PSK"
+        config ESP_WIFI_AUTH_WAPI_PSK
+            bool "WAPI PSK"
+    endchoice
+
+    config WIFI_SSID
+        string "WiFi SSID"
+        default "myssid"
+        help
+            SSID (network name) for the example to connect to.
+
+    config WIFI_PASS
+        string "WiFi Password"
+        default "mypassword"
+        help
+            WiFi password (WPA or WPA2) for the example to use.
+
+    config TCP_PORT
+        int "TCP Server Port"
+        default 1234
+        help
+            Port to use for TCP server
+
+    config KEEPALIVE_IDLE
+        int "TCP Keepalive Idle"
+        default 7200
+        help
+            TCP keepalive idle time in seconds
+
+    config KEEPALIVE_INTERVAL
+        int "TCP Keepalive Interval"
+        default 75
+        help
+            TCP keepalive interval in seconds
+
+    config KEEPALIVE_COUNT
+        int "TCP Keepalive Count"
+        default 3
+        help
+            TCP keepalive count
+endmenu
