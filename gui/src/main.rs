@@ -165,7 +165,7 @@ impl Application for App {
                     ))
                     .into();
                 let port_input: Element<_> = row()
-                    .push(text("Address"))
+                    .push(text("Port"))
                     .push(text_input("1234", &state.port, Message::PortChanged))
                     .into();
 
