@@ -4,5 +4,6 @@ edition = "2021"
 version = "0.1.0"
 
 [dependencies]
-iced = { version = "0.4.2", features = ["pure"] }
-take_mut = "0.2.2"
+eyre = "0.6.8"
+iced = { version = "0.4.2", features = ["pure", "tokio"] }
+tokio = { version = "1.19.2", features = ["net", "io-util", "sync"] }
