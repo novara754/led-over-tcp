@@ -14,6 +14,13 @@ struct DisconnectedState {
 }
 
 #[derive(Debug)]
+struct ConnectionFailedState {
+    address: String,
+    port: String,
+    reason: String,
+}
+
+#[derive(Debug)]
 struct ConnectedState {
     socket: TcpStream,
 }
@@ -21,6 +28,7 @@ struct ConnectedState {
 #[derive(Debug)]
 enum App {
     Disconnected(DisconnectedState),
+    ConnectionFailed(ConnectionFailedState),
     Connected(ConnectedState),
 }
 
@@ -28,6 +36,7 @@ enum App {
 enum Message {
     AddressChanged(String),
     PortChanged(String),
+    RetryConnect,
     Connect,
     ToggleLed,
 }
@@ -47,11 +56,25 @@ impl Sandbox for App {
         if let Message::Connect = msg {
             take_mut::take(self, |state| {
                 if let Self::Disconnected(state) = state {
-                    let address = state.address;
-                    let port: u16 = state.port.parse().unwrap();
-                    Self::Connected(ConnectedState {
-                        socket: TcpStream::connect((address, port)).unwrap(),
-                    })
+                    let address = state.address.as_str();
+                    let port = if let Ok(port) = state.port.parse::<u16>() {
+                        port
+                    } else {
+                        return Self::ConnectionFailed(ConnectionFailedState {
+                            address: state.address,
+                            port: state.port,
+                            reason: "Invalid port".to_string(),
+                        });
+                    };
+
+                    match TcpStream::connect((address, port)) {
+                        Ok(socket) => Self::Connected(ConnectedState { socket }),
+                        Err(e) => Self::ConnectionFailed(ConnectionFailedState {
+                            address: state.address,
+                            port: state.port,
+                            reason: e.to_string(),
+                        }),
+                    }
                 } else {
                     unreachable!()
                 }
@@ -67,6 +90,10 @@ impl Sandbox for App {
                 Message::PortChanged(port) => {
                     state.port = port;
                 }
+                _ => unreachable!(),
+            },
+            Self::ConnectionFailed(_state) => match msg {
+                Message::RetryConnect => *self = Self::new(),
                 _ => unreachable!(),
             },
             Self::Connected(state) => match msg {
@@ -107,13 +134,21 @@ impl Sandbox for App {
                     .push(button("Connect").on_press(Message::Connect))
                     .into()
             }
+            Self::ConnectionFailed(state) => column()
+                .padding(20)
+                .push(text(format!(
+                    "Connected to `{}:{}` failed.\nReason: {}",
+                    state.address, state.port, state.reason
+                )))
+                .push(button("Back").on_press(Message::RetryConnect))
+                .into(),
             Self::Connected(state) => {
                 let message_input = row().push(button("Toggle LED").on_press(Message::ToggleLed));
 
                 column()
                     .padding(20)
                     .push(text(format!(
-                        "Connected to {}.",
+                        "Connected to `{}`.",
                         state.socket.peer_addr().unwrap()
                     )))
                     .push(message_input)
