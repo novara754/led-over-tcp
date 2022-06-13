@@ -15,17 +15,17 @@
 #include <lwip/netdb.h>
 
 #define TOGGLE_COMMAND 0xAA
+#define STATUS_COMMAND 0xBB
 #define ACK_COMMAND 0x06
 
 static const char *TAG = "led_over_tcp:tcp";
 
-static void send_ack(const int sock)
+static void send_byte(const int sock, const char byte)
 {
-    char ack = ACK_COMMAND;
-    int written_len = send(sock, &ack, 1, 0);
+    int written_len = send(sock, &byte, 1, 0);
     if (written_len != 1)
     {
-        ESP_LOGE(TAG, "Failed to send ACK to client: %d", errno);
+        ESP_LOGE(TAG, "Failed to send byte to client: %d", errno);
     }
 }
 
@@ -52,14 +52,22 @@ static void handle_client(const int sock)
             switch (command)
             {
                 case TOGGLE_COMMAND: {
-                    static uint32_t level = 1;
+                    static char level = 1;
+
+                    ESP_LOGI(TAG, "Toggling LED");
                     gpio_set_level(CONFIG_BLINK_GPIO, level);
+
+                    ESP_LOGI(TAG, "Sending ACK");
+                    send_byte(sock, ACK_COMMAND);
+
+                    ESP_LOGI(TAG, "Sending current LED status %d", level);
+                    send_byte(sock, STATUS_COMMAND);
+                    send_byte(sock, level);
+
                     level = !level;
                     break;
                 }
             }
-
-            send_ack(sock);
         }
     }
 }

@@ -8,7 +8,14 @@ use tokio::net::TcpStream;
 use tokio::sync::Mutex;
 
 const TOGGLE_COMMAND: u8 = 0xAA;
+const STATUS_COMMAND: u8 = 0xBB;
 const ACKNOWLEDGE_COMMAND: u8 = 0x06;
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum LedState {
+    On,
+    Off,
+}
 
 #[derive(Default, Debug)]
 struct DisconnectedState {
@@ -26,6 +33,7 @@ struct ConnectionFailedState {
 #[derive(Debug)]
 struct ConnectedState {
     socket: Arc<Mutex<TcpStream>>,
+    led_state: LedState,
 }
 
 #[derive(Debug)]
@@ -43,7 +51,7 @@ enum Message {
     RetryConnect,
     Connected(tokio::io::Result<tokio::net::TcpStream>),
     ToggleLed,
-    ToggledLed(Result<(), String>),
+    ToggledLed(Result<LedState, String>),
 }
 
 impl Clone for Message {
@@ -110,6 +118,7 @@ impl Application for App {
                     *self = match socket {
                         Ok(socket) => Self::Connected(ConnectedState {
                             socket: Arc::new(Mutex::new(socket)),
+                            led_state: LedState::Off,
                         }),
                         Err(e) => Self::ConnectionFailed(ConnectionFailedState {
                             address: state.address.clone(),
@@ -131,7 +140,12 @@ impl Application for App {
                         Message::ToggledLed,
                     );
                 }
-                Message::ToggledLed(_e) => {}
+                Message::ToggledLed(r) => match r {
+                    Ok(led_state) => state.led_state = led_state,
+                    Err(e) => {
+                        eprintln!("ToggledLed: {}", e);
+                    }
+                },
                 _ => unreachable!(),
             },
         }
@@ -171,12 +185,13 @@ impl Application for App {
                 )))
                 .push(button("Back").on_press(Message::RetryConnect))
                 .into(),
-            Self::Connected(_state) => {
+            Self::Connected(state) => {
                 let message_input = row().push(button("Toggle LED").on_press(Message::ToggleLed));
 
                 column()
                     .padding(20)
                     .push(text("Connected."))
+                    .push(text(format!("LED: {:?}", state.led_state)))
                     .push(message_input)
                     .into()
             }
@@ -184,7 +199,7 @@ impl Application for App {
     }
 }
 
-async fn send_toggle_command(socket: Arc<Mutex<TcpStream>>) -> Result<(), String> {
+async fn send_toggle_command(socket: Arc<Mutex<TcpStream>>) -> Result<LedState, String> {
     let mut socket = socket.lock().await;
 
     let written_len = socket
@@ -193,13 +208,18 @@ async fn send_toggle_command(socket: Arc<Mutex<TcpStream>>) -> Result<(), String
         .map_err(|e| e.to_string())?;
     assert_eq!(written_len, 1);
 
-    let mut ack = [0];
+    let mut response = [0; 3];
     socket
-        .read_exact(&mut ack)
+        .read_exact(&mut response)
         .await
         .map_err(|e| e.to_string())?;
-    assert_eq!(ack, [ACKNOWLEDGE_COMMAND]);
-    Ok(())
+    assert_eq!(response[0..2], [ACKNOWLEDGE_COMMAND, STATUS_COMMAND]);
+
+    Ok(if response[2] == 0 {
+        LedState::Off
+    } else {
+        LedState::On
+    })
 }
 
 fn main() -> iced::Result {
