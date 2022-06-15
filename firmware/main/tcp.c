@@ -17,7 +17,6 @@
 #include "led_control.h"
 
 #define TOGGLE_COMMAND 0xAA
-#define LEVEL_COMMAND 0xBB
 #define ACK_COMMAND 0x06
 
 static const char *TAG = "led_over_tcp:tcp";
@@ -61,7 +60,6 @@ static void handle_client(const int sock)
                     send_byte(sock, ACK_COMMAND);
 
                     ESP_LOGI(TAG, "Sending current LED level %d", new_level);
-                    send_byte(sock, LEVEL_COMMAND);
                     send_byte(sock, new_level);
 
                     break;
