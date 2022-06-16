@@ -5,5 +5,7 @@ version = "0.1.0"
 
 [dependencies]
 eyre = "0.6.8"
+thiserror = "1.0.31"
 iced = { version = "0.4.2", features = ["pure", "tokio"] }
-tokio = { version = "1.19.2", features = ["net", "io-util", "sync"] }
+tokio = { version = "1.19.2", features = ["net", "io-util", "sync", "rt", "macros"] }
+tokio-test = "0.4.2"

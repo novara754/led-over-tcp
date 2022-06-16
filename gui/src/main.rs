@@ -2,11 +2,13 @@ mod connection;
 
 use std::sync::Arc;
 
-use connection::{Connection, LedState};
 use iced::pure::{button, column, row, text, text_input, Application, Element};
 use iced::{Alignment, Command, Settings};
 
+use tokio::net::TcpStream;
 use tokio::sync::Mutex;
+
+use connection::{Connection, LedState};
 
 #[derive(Default, Debug)]
 struct DisconnectedState {
@@ -23,7 +25,7 @@ struct ConnectionFailedState {
 
 #[derive(Debug)]
 struct ConnectedState {
-    connection: Arc<Mutex<Connection>>,
+    connection: Arc<Mutex<Connection<TcpStream>>>,
     led_state: LedState,
 }
 
@@ -40,7 +42,7 @@ enum Message {
     PortChanged(String),
     Connect,
     RetryConnect,
-    Connected(eyre::Result<Connection>),
+    Connected(eyre::Result<Connection<TcpStream>>),
     ToggleLed,
     ToggledLed(eyre::Result<LedState>),
 }
